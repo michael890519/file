@@ -4,15 +4,21 @@
 <title>案件管理系統</title><link rel="stylesheet" href="assets/style.css"></head>
 <body>
 <header><div><h1>案件管理系統</h1><small>單機瀏覽器版</small></div>
-<nav><button class="tab active" data-page="cases">案件列表</button><button class="tab" data-page="stats">統計</button><button class="tab" data-page="settings">設定／備份</button></nav></header>
+<nav><button class="tab active" data-page="dashboard">儀表板</button><button class="tab" data-page="cases">案件列表</button><button class="tab" data-page="stats">統計</button><button class="tab" data-page="settings">設定／備份</button></nav></header>
 <main>
-<section id="cases" class="page active">
+<section id="dashboard" class="page active">
+<h2>儀表板</h2><div id="dash" class="dashboard"></div>
+<div class="card"><h3>工研院即將逾期</h3><p class="muted">工研院、工研院／核安、補件工研院之案件，剩餘天數少於 21 天。</p><div id="instituteSoon" class="dashboard-list"></div></div>
+<div class="card"><h3>發文待補即將逾期</h3><p class="muted">狀態為發文待補之案件，剩餘天數少於 7 天。</p><div id="issuedSoon" class="dashboard-list"></div></div>
+</section>
+<section id="cases" class="page">
 <div class="toolbar"><button id="add" class="primary">＋ 新增案件</button><input id="search" placeholder="搜尋文號">
-<select id="ft"><option value="">案件類型：全部</option></select><select id="fs"><option value="">階段：全部</option></select><select id="fst"><option value="">狀態：全部</option></select>
+<select id="ft"><option value="">案件類型：全部</option></select><select id="fs"><option value="">階段：全部</option></select><select id="fst"><option value="">狀態：全部</option></select><select id="fo"><option value="">他處：全部</option><option value="self">自理（無送他處、核安）</option><option value="institute">工研院（工研院、工研院／核安、補件工研院）</option></select>
 <input id="fm" type="month" title="收文月份"><input id="fr" type="month" title="送覆核月份">
-<select id="sort"><option value="received-desc">收文日期 ↓</option><option value="received-asc">收文日期 ↑</option><option value="deadline-desc">截止日期 ↓</option><option value="deadline-asc">截止日期 ↑</option><option value="review-desc">送覆核日期 ↓</option><option value="review-asc">送覆核日期 ↑</option><option value="issued-desc">發文日期 ↓</option><option value="issued-asc">發文日期 ↑</option></select></div>
+<select id="sort"><option value="received-desc">收文日期 ↓</option><option value="received-asc">收文日期 ↑</option><option value="deadline-desc">截止日期 ↓</option><option value="deadline-asc">截止日期 ↑</option><option value="review-desc">送覆核日期 ↓</option><option value="review-asc">送覆核日期 ↑</option><option value="issued-desc">發文日期 ↓</option><option value="issued-asc">發文日期 ↑</option><option value="left-asc">剩餘天數 ↑</option><option value="left-desc">剩餘天數 ↓</option></select></div>
 <div class="tip">同一台裝置、同一瀏覽器重新開啟網址，資料會保留。換電腦請先匯出 ZIP。</div>
 <div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="body"></tbody></table></div>
+<h3 class="section-title">已結案案件</h3><div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="closedBody"></tbody></table></div>
 </section>
 <section id="stats" class="page"><h2>月統計</h2><div class="card"><h3>一、依收文月份</h3><div id="mc" class="checks"></div><div class="table"><table><thead><tr><th>月份</th><th>案件類型</th><th>當月收文</th><th>目前待處理</th></tr></thead><tbody id="s1"></tbody></table></div></div>
 <div class="card"><h3>二、目前待處理：案件類型 × 階段</h3><div class="table"><table><thead><tr><th>案件類型</th><th>階段</th><th>待處理數</th><th>最早收文日期</th></tr></thead><tbody id="s2"></tbody></table></div></div>
