@@ -4,3 +4,5 @@
 .institute td.product-red b,
 td.product-red,
 td.product-red b{color:#c00000 !important}
+
+.version{font-size:13px;font-weight:500;opacity:.9;margin-left:8px;vertical-align:middle}.product-red{color:#c00000 !important}
