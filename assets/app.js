@@ -9,7 +9,7 @@ function addMonths(x,n){if(!x)return"";let d=new Date(x+"T00:00:00"),day=d.getDa
 function add3(x){return addMonths(x,3)}
 function add4(x){return addMonths(x,4)}
 function add10(x){if(!x)return"";let d=new Date(x+"T00:00:00");d.setDate(d.getDate()+10);return d.toISOString().slice(0,10)}
-function left(c){if(C.includes(c.status))return null;let x=c.status===FORMAL?add10(c.received):c.status===APPEAL?add4(c.appealIssued||c.issued):c.status==="發文待補"?add3(c.issued):c.deadline;if(!x)return null;let n=new Date();n.setHours(0,0,0,0);return Math.ceil((new Date(x+"T00:00:00")-n)/86400000)}
+function left(c){if(C.includes(c.status)||c.status==="已補件")return null;let x=c.status===FORMAL?add10(c.received):c.status===APPEAL?add4(c.appealIssued||c.issued):c.status==="發文待補"?add3(c.issued):c.deadline;if(!x)return null;let n=new Date();n.setHours(0,0,0,0);return Math.ceil((new Date(x+"T00:00:00")-n)/86400000)}
 function rule(c){return c.status==="發文待補"||c.status===APPEAL?{red:7,yellow:7}:D.rules[c.type+"|"+c.stage]||{red:3,yellow:7}}
 function cls(c){if(C.includes(c.status))return"closed";let d=left(c),r=rule(c);return d!==null?(d<=r.red?"red":d<=r.yellow?"yellow":""):""}
 function placeClass(c){return I.includes(c.place)?" institute":""}
