@@ -17,19 +17,19 @@
 <input id="fm" type="month" title="收文月份"><input id="fr" type="month" title="送覆核月份">
 <select id="sort"><option value="received-desc">收文日期 ↓</option><option value="received-asc">收文日期 ↑</option><option value="deadline-desc">截止日期 ↓</option><option value="deadline-asc">截止日期 ↑</option><option value="review-desc">送覆核日期 ↓</option><option value="review-asc">送覆核日期 ↑</option><option value="issued-desc">發文日期 ↓</option><option value="issued-asc">發文日期 ↑</option><option value="left-asc">剩餘天數 ↑</option><option value="left-desc">剩餘天數 ↓</option></select></div>
 <div class="tip">同一台裝置、同一瀏覽器重新開啟網址，資料會保留。換電腦請先匯出 ZIP。</div>
-<div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="body"></tbody></table></div>
-<h3 class="section-title">已結案案件</h3><div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="closedBody"></tbody></table></div>
+<div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>廠商</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="body"></tbody></table></div>
+<h3 class="section-title">發文待補／已補件案件</h3><div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>廠商</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="holdBody"></tbody></table></div><h3 class="section-title">已結案案件</h3><div class="table"><table><thead><tr><th>文號</th><th>案件類型</th><th>階段</th><th>廠商</th><th>品名</th><th>收文日期</th><th>截止日期</th><th>送覆核日期</th><th>發文日期</th><th>狀態</th><th>剩餘天數</th><th>操作</th></tr></thead><tbody id="closedBody"></tbody></table></div>
 </section>
 <section id="stats" class="page"><h2>月統計</h2><div class="card"><h3>一、依收文月份</h3><div id="mc" class="checks"></div><div class="table"><table><thead><tr><th>月份</th><th>案件類型</th><th>當月收文</th><th>目前待處理</th></tr></thead><tbody id="s1"></tbody></table></div></div>
 <div class="card"><h3>二、目前待處理：案件類型 × 階段</h3><div class="table"><table><thead><tr><th>案件類型</th><th>階段</th><th>待處理數</th><th>最早收文日期</th></tr></thead><tbody id="s2"></tbody></table></div></div>
-<div class="card"><h3>三、依送覆核月份列出非待處理案件</h3><div id="rc" class="checks"></div><pre id="s3"></pre></div></section>
+<div class="card"><h3>三、依送覆核月份列出完成案件</h3><div id="rc" class="checks"></div><pre id="s3"></pre></div></section>
 <section id="settings" class="page"><h2>設定／備份</h2><div class="card"><h3>提醒天數</h3><p>一般案件依案件類型 × 階段設定；發文待補統一剩餘 7 天內紅色。</p><div class="table"><table><thead><tr><th>案件類型</th><th>階段</th><th>紅色門檻</th><th>黃色門檻</th></tr></thead><tbody id="rules"></tbody></table></div><button id="saveRules" class="primary">儲存提醒設定</button></div>
 <div class="card"><h3>ZIP 備份／還原</h3><button id="export" class="primary">匯出 ZIP</button> <label class="secondary">匯入 ZIP<input id="import" type="file" accept=".zip" hidden></label></div></section>
 </main>
 <div id="modal" class="modal hidden"><div class="dialog"><div class="dh"><h2 id="mt">新增案件</h2><button id="close">×</button></div>
 <form id="form"><input type="hidden" id="id"><div class="grid">
 <label>案件類型<select id="type" required></select></label><label>案件階段<select id="stage" required></select></label>
-<label id="pw">母文文號<select id="parent"></select></label><label>文號<input id="doc" required></label><label>品名<input id="product"></label>
+<label id="pw">母文文號<select id="parent"></select></label><label>文號<input id="doc" required></label><label>廠商<input id="vendor"></label><label>品名<input id="product"></label>
 <label>收文日期<input id="received" type="date" required></label><label>截止日期<input id="deadline" type="date" required></label>
 <label>送覆核日期<input id="review" type="date"></label><label>發文日期<input id="issued" type="date"></label><label>狀態<select id="status" required></select></label>
 <label class="check"><input id="other" type="checkbox"> 是否送他處</label><label id="placew">他處位置<select id="place"></select></label></div>
