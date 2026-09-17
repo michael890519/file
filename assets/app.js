@@ -19,7 +19,33 @@ function stagesFor(type){return type==="委託製造"?["新案","補件"]:G}
 function refreshStageOptions(keep=true){let cur=keep?$("stage").value:"新案";let a=stagesFor($("type").value);fill("stage",a);if(a.includes(cur))$("stage").value=cur;else $("stage").value="新案";}
 function statusOptions(hasIssued,cur){let allowed=hasIssued?["發文待補","發文結案","逾期未補","撤案"]:S;if($("stage")?.value==="補件"&&hasIssued)allowed.push(APPEAL);$("status").innerHTML=allowed.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");if(allowed.includes(cur))$("status").value=cur;else $("status").value=allowed[0]}
 function filtered(){let q=$("search").value.toLowerCase().trim(),fo=$("fo").value;return D.cases.filter(c=>(!q||String(c.doc||"").toLowerCase().includes(q))&&(!$("ft").value||c.type===$("ft").value)&&(!$("fs").value||c.stage===$("fs").value)&&(!$("fst").value||c.status===$("fst").value)&&(!fo||(fo==="institute"?I.includes(c.place):!I.includes(c.place)))&&(!$("fm").value||month(c.received)===$("fm").value)&&(!$("fr").value||month(c.review)===$("fr").value))}
-function normalizeAutoStatuses(){let changed=false;D.cases.forEach(c=>{if(c.status===APPEAL&&c.stage==="補件"){let p=D.cases.find(x=>x.doc===c.parent&&x.stage==="新案");if(p){p.status=APPEAL;p.appealIssued=c.appealIssued||c.issued||p.appealIssued||"";changed=true}}});D.cases.slice().forEach(c=>{if(c.status===APPEAL&&left(c)!==null&&left(c)<0){let pa=c.parent;let p=c.stage==="補件"?D.cases.find(x=>x.doc===pa&&x.stage==="新案"):c;let b=c.stage==="補件"?c:D.cases.find(x=>x.doc===c.doc&&x.stage==="補件");[c,p,b].filter(Boolean).forEach(x=>{if(x.status!==APPEAL_OVERDUE){x.status=APPEAL_OVERDUE;changed=true}})}});if(changed)save()}
+function normalizeAutoStatuses(){let changed=false;
+  // 可申覆的截止日以「發文日期＋4個月」計算；補件的可申覆狀態同步到母文。
+  D.cases.forEach(c=>{
+    if(c.status===APPEAL&&c.stage==="補件"){
+      let p=D.cases.find(x=>x.doc===c.parent&&x.stage==="新案");
+      if(p){
+        let issued=c.issued||c.appealIssued||p.appealIssued||p.issued||"";
+        if(p.status!==APPEAL||p.appealIssued!==issued){p.status=APPEAL;p.appealIssued=issued;changed=true}
+      }
+    }
+  });
+  // 每次重新整理、操作或定時檢查時，只要可申覆已過期，就同步關聯案件並移入已結案。
+  D.cases.slice().forEach(c=>{
+    if(c.status!==APPEAL)return;
+    let pa=c.stage==="補件"?c.parent:c.doc;
+    let p=c.stage==="補件"?D.cases.find(x=>x.doc===pa&&x.stage==="新案"):c;
+    let b=D.cases.find(x=>x.doc===pa&&x.stage==="補件");
+    let source=(c.appealIssued||c.issued||p?.appealIssued||p?.issued||"");
+    let due=add4(source);
+    let n=new Date();n.setHours(0,0,0,0);
+    if(due&&new Date(due+"T00:00:00")<n){
+      [c,p,b].filter(Boolean).forEach(x=>{if(x.status!==APPEAL_OVERDUE){x.status=APPEAL_OVERDUE;changed=true}});
+    }
+  });
+  if(changed)save();
+  return changed
+}
 function formalRow(c){let d=left(c);return `<tr class="${d!==null&&d<=3?"red":d!==null&&d<=7?"yellow":""}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.vendor)}</td><td>${esc(c.product)}</td><td>${c.received||""}</td><td>${d===null?"—":d}</td><td><input type="checkbox" class="formal-check" data-formal="${c.id}"></td></tr>`}
 function row(c){return `<tr class="${cls(c)}${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td>${esc(c.product)}</td><td>${c.received||""}</td><td>${c.deadline||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td>${left(c)===null?"—":left(c)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
 function closedRow(c){return `<tr class="closed${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td>${esc(c.product)}</td><td>${c.received||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
@@ -48,4 +74,6 @@ document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelect
 $("export").onclick=()=>{let text=JSON.stringify({version:4,...D});let blob=new Blob([text],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="案件管理備份_"+new Date().toISOString().slice(0,10)+".json";a.click()};
 $("import").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!Array.isArray(o.cases))throw Error();if(confirm("匯入會覆蓋目前資料，確定嗎？")){D={cases:o.cases,rules:o.rules||{}};D.cases.forEach(c=>{if(c.vendor===undefined)c.vendor=""});save();render();stats();alert("匯入完成")}}catch(x){alert("備份檔案無法讀取")}};
 render();stats();
+// 自動跨日檢查：即使使用者沒有重新整理頁面，到了截止日後也會自動移入「已結案」。
+setInterval(()=>{if(normalizeAutoStatuses()) {render();stats()}},60000);
 })();
