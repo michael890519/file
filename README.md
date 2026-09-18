@@ -1,12 +1,12 @@
-# 案件管理 GitHub Pages 重新版
+# 案件管理系統 v17
 
-請將 `index.html` 與 `assets` 資料夾一起放在 GitHub repository 根目錄。
-GitHub → Settings → Pages → Deploy from a branch → main → /(root) → Save。
+GitHub Pages 靜態版，資料儲存在瀏覽器 localStorage，資料鍵仍為 `case_manager_v4`，並同步保留 `case_manager_v4_backup` 備份。
 
-這版是純 HTML/CSS/JavaScript，不需要 Python。
-資料存在目前瀏覽器的 localStorage，因此同一台電腦、同一瀏覽器重新開網址仍會保留；不同電腦各自獨立。
+本次更新：
+1. 備份格式統一為 JSON；匯出按鈕顯示「匯出 JSON」，匯入按鈕顯示「匯入 JSON」，檔案選取限制改為 JSON。
+2. 新增案件的「廠商」欄位加入可輸入篩選功能，會從系統既有案件出現過的廠商中提供選取，最多顯示 30 筆。
+3. 「送他處」選擇「核安」或「工研院/核安」時，案件列表中的品名恢復紅字，並覆蓋工研院藍字效果。
+4. 版本標示更新為 v17。
+5. 保留前版資料持久化與 JSON 備份機制。
 
-注意：此版的瀏覽器備份為 JSON 下載檔（副檔名仍由瀏覽器產生）。若你一定要真正 ZIP，我下一版可以再改成 ZIP 套件。
-
-
-本次功能更新：新增廠商欄位並與母文聯動；委託製造階段不含申覆；補件輸入時母文若為發文待補會自動轉為已補件；發文待補／已補件獨立表格；儀表板待補件統計；統計表三改為完成並納入已補件。
+部署方式：將 `index.html` 與 `assets/` 一起放在 GitHub Pages 網站根目錄。
