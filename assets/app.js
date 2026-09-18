@@ -1,10 +1,13 @@
 (()=>{"use strict";
-const VERSION="v15"; const T=["查驗登記","許可證變更","委託製造"], G=["新案","補件","申覆"], S=["待處理","送覆核","發文待補","發文結案","逾期未補","撤案"], FORMAL="形式審", APPEAL="可申覆", APPEAL_OVERDUE="申覆逾期", P=["工研院","工研院/核安","核安","補件工研院"], C=["發文結案","逾期未補","撤案",APPEAL_OVERDUE], HOLD=["發文待補","已補件"], I=["工研院","工研院/核安","補件工研院"], K="case_manager_v4";
-let D;try{D=JSON.parse(localStorage.getItem(K)||"null")}catch(e){}if(!D||!Array.isArray(D.cases))D={cases:[],rules:{}};
+const T=["查驗登記","許可證變更","委託製造"], G=["新案","補件","申覆"], S=["待處理","送覆核","發文待補","發文結案","逾期未補","撤案"], FORMAL="形式審", APPEAL="可申覆", APPEAL_OVERDUE="申覆逾期", P=["工研院","工研院/核安","核安","補件工研院"], C=["發文結案","逾期未補","撤案",APPEAL_OVERDUE], HOLD=["發文待補","已補件"], I=["工研院","工研院/核安","補件工研院"], K="case_manager_v4", KB=K+"_backup";
+function readStore(key){try{let x=localStorage.getItem(key);if(!x)return null;let o=JSON.parse(x);return o&&Array.isArray(o.cases)?o:null}catch(e){return null}}
+let D=readStore(K)||readStore(KB)||{cases:[],rules:{}};
 // 舊資料相容：補上廠商欄位
 D.cases.forEach(c=>{if(c.vendor===undefined)c.vendor="";if(c.status==="已補件")c.status="已補件"});
 const $=x=>document.getElementById(x),esc=x=>String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])),uid=()=>Date.now()+"_"+Math.random().toString(36).slice(2);
-function save(){localStorage.setItem(K,JSON.stringify(D))}function month(x){return x?x.slice(0,7):""}
+function save(){let text=JSON.stringify(D);try{localStorage.setItem(K,text)}catch(e){console.warn("主要資料儲存失敗",e)}try{localStorage.setItem(KB,text)}catch(e){console.warn("備份資料儲存失敗",e)}}
+window.addEventListener("pagehide",()=>save());window.addEventListener("beforeunload",()=>save());
+function month(x){return x?x.slice(0,7):""}
 function addMonths(x,n){if(!x)return"";let d=new Date(x+"T00:00:00"),day=d.getDate();d.setDate(1);d.setMonth(d.getMonth()+n);d.setDate(Math.min(day,new Date(d.getFullYear(),d.getMonth()+1,0).getDate()));return d.toISOString().slice(0,10)}
 function add3(x){return addMonths(x,3)}
 function add4(x){return addMonths(x,4)}
@@ -13,44 +16,16 @@ function left(c){if(C.includes(c.status)||c.status==="已補件")return null;let
 function rule(c){return c.status==="發文待補"||c.status===APPEAL?{red:7,yellow:7}:D.rules[c.type+"|"+c.stage]||{red:3,yellow:7}}
 function cls(c){if(C.includes(c.status))return"closed";let d=left(c),r=rule(c);return d!==null?(d<=r.red?"red":d<=r.yellow?"yellow":""):""}
 function placeClass(c){return I.includes(c.place)?" institute":""}
-function productClass(c){return (c.place==="核安"||c.place==="工研院/核安")?" product-red":""}
-function productStyle(c){return (c.place==="核安"||c.place==="工研院/核安")?' style="color:#c00000 !important"':""}
 function fill(id,a,first=""){$(id).innerHTML=first+a.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("")}
 fill("type",T);fill("place",P);fill("ft",T,'<option value="">案件類型：全部</option>');fill("fst",S,'<option value="">狀態：全部</option>');
 function stagesFor(type){return type==="委託製造"?["新案","補件"]:G}
 function refreshStageOptions(keep=true){let cur=keep?$("stage").value:"新案";let a=stagesFor($("type").value);fill("stage",a);if(a.includes(cur))$("stage").value=cur;else $("stage").value="新案";}
 function statusOptions(hasIssued,cur){let allowed=hasIssued?["發文待補","發文結案","逾期未補","撤案"]:S;if($("stage")?.value==="補件"&&hasIssued)allowed.push(APPEAL);$("status").innerHTML=allowed.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join("");if(allowed.includes(cur))$("status").value=cur;else $("status").value=allowed[0]}
 function filtered(){let q=$("search").value.toLowerCase().trim(),fo=$("fo").value;return D.cases.filter(c=>(!q||String(c.doc||"").toLowerCase().includes(q))&&(!$("ft").value||c.type===$("ft").value)&&(!$("fs").value||c.stage===$("fs").value)&&(!$("fst").value||c.status===$("fst").value)&&(!fo||(fo==="institute"?I.includes(c.place):!I.includes(c.place)))&&(!$("fm").value||month(c.received)===$("fm").value)&&(!$("fr").value||month(c.review)===$("fr").value))}
-function normalizeAutoStatuses(){let changed=false;
-  // 可申覆的截止日以「發文日期＋4個月」計算；補件的可申覆狀態同步到母文。
-  D.cases.forEach(c=>{
-    if(c.status===APPEAL&&c.stage==="補件"){
-      let p=D.cases.find(x=>x.doc===c.parent&&x.stage==="新案");
-      if(p){
-        let issued=c.issued||c.appealIssued||p.appealIssued||p.issued||"";
-        if(p.status!==APPEAL||p.appealIssued!==issued){p.status=APPEAL;p.appealIssued=issued;changed=true}
-      }
-    }
-  });
-  // 每次重新整理、操作或定時檢查時，只要可申覆已過期，就同步關聯案件並移入已結案。
-  D.cases.slice().forEach(c=>{
-    if(c.status!==APPEAL)return;
-    let pa=c.stage==="補件"?c.parent:c.doc;
-    let p=c.stage==="補件"?D.cases.find(x=>x.doc===pa&&x.stage==="新案"):c;
-    let b=D.cases.find(x=>x.doc===pa&&x.stage==="補件");
-    let source=(c.appealIssued||c.issued||p?.appealIssued||p?.issued||"");
-    let due=add4(source);
-    let n=new Date();n.setHours(0,0,0,0);
-    if(due&&new Date(due+"T00:00:00")<n){
-      [c,p,b].filter(Boolean).forEach(x=>{if(x.status!==APPEAL_OVERDUE){x.status=APPEAL_OVERDUE;changed=true}});
-    }
-  });
-  if(changed)save();
-  return changed
-}
-function formalRow(c){let d=left(c);return `<tr class="${d!==null&&d<=3?"red":d!==null&&d<=7?"yellow":""}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.vendor)}</td><td class="${productClass(c).trim()}"${productStyle(c)}>${esc(c.product)}</td><td>${c.received||""}</td><td>${d===null?"—":d}</td><td><input type="checkbox" class="formal-check" data-formal="${c.id}"></td></tr>`}
-function row(c){return `<tr class="${cls(c)}${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td class="${productClass(c).trim()}"${productStyle(c)}>${esc(c.product)}</td><td>${c.received||""}</td><td>${c.deadline||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td>${left(c)===null?"—":left(c)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
-function closedRow(c){return `<tr class="closed${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td class="${productClass(c).trim()}"${productStyle(c)}>${esc(c.product)}</td><td>${c.received||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
+function normalizeAutoStatuses(){let changed=false;D.cases.forEach(c=>{if(c.status===APPEAL&&c.stage==="補件"){let p=D.cases.find(x=>x.doc===c.parent&&x.stage==="新案");if(p){p.status=APPEAL;p.appealIssued=c.appealIssued||c.issued||p.appealIssued||"";changed=true}}});D.cases.slice().forEach(c=>{if(c.status===APPEAL&&left(c)!==null&&left(c)<0){let pa=c.parent;let p=c.stage==="補件"?D.cases.find(x=>x.doc===pa&&x.stage==="新案"):c;let b=c.stage==="補件"?c:D.cases.find(x=>x.doc===c.doc&&x.stage==="補件");[c,p,b].filter(Boolean).forEach(x=>{if(x.status!==APPEAL_OVERDUE){x.status=APPEAL_OVERDUE;changed=true}})}});if(changed)save()}
+function formalRow(c){let d=left(c);return `<tr class="${d!==null&&d<=3?"red":d!==null&&d<=7?"yellow":""}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.vendor)}</td><td class="product-cell${(c.place==="核安"||c.place==="工研院/核安")?" product-alert":""}">${esc(c.product)}</td><td>${c.received||""}</td><td>${d===null?"—":d}</td><td><input type="checkbox" class="formal-check" data-formal="${c.id}"></td></tr>`}
+function row(c){return `<tr class="${cls(c)}${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td>${esc(c.product)}</td><td>${c.received||""}</td><td>${c.deadline||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td>${left(c)===null?"—":left(c)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
+function closedRow(c){return `<tr class="closed${placeClass(c)}"><td><b>${esc(c.doc)}</b></td><td>${esc(c.type)}</td><td>${esc(c.stage)}</td><td>${esc(c.vendor)}</td><td class="product-cell${(c.place==="核安"||c.place==="工研院/核安")?" product-alert":""}">${esc(c.product)}</td><td>${c.received||""}</td><td>${c.review||""}</td><td>${c.issued||""}</td><td>${esc(c.status)}</td><td><button class="btn" data-e="${c.id}">編輯</button> <button class="btn danger" data-d="${c.id}">刪除</button></td></tr>`}
 function sortCases(a){let [f,d]=$("sort").value.split("-"),m={received:"received",deadline:"deadline",review:"review",issued:"issued"};let top=a.filter(c=>c.status==="發文待補"&&left(c)!==null&&left(c)<0),rest=a.filter(c=>!(c.status==="發文待補"&&left(c)!==null&&left(c)<0));const cmp=(x,y)=>{if(f==="left"){let lx=left(x),ly=left(y);if(lx===null)lx=Infinity;if(ly===null)ly=Infinity;return(d==="asc"?1:-1)*(lx-ly)}return(d==="asc"?1:-1)*((x[m[f]]||"").localeCompare(y[m[f]]||""))};top.sort(cmp);rest.sort(cmp);return top.concat(rest)}
 function render(){normalizeAutoStatuses();let a=sortCases(filtered()),formal=a.filter(c=>c.status===FORMAL),active=a.filter(c=>!C.includes(c.status)&&!HOLD.includes(c.status)&&c.status!==FORMAL&&c.status!==APPEAL),hold=a.filter(c=>HOLD.includes(c.status)),appeal=a.filter(c=>c.status===APPEAL),closed=a.filter(c=>C.includes(c.status));[[$("formalWrap"),formal.length],[ $("activeWrap"),active.length],[ $("holdWrap"),hold.length],[ $("appealWrap"),appeal.length],[ $("closedWrap"),closed.length]].forEach(([el,n])=>{if(el){el.hidden=!n;el.classList.toggle("hidden",!n)}});$("formalBody").innerHTML=formal.map(formalRow).join("");$("body").innerHTML=active.map(row).join("");$("holdBody").innerHTML=hold.map(row).join("");$("appealBody").innerHTML=appeal.map(row).join("");$("closedBody").innerHTML=closed.map(closedRow).join("");document.querySelectorAll(".formal-check").forEach(x=>x.onchange=()=>{if(x.checked){let c=D.cases.find(c=>c.id===x.dataset.formal);if(c){c.status="待處理";save();render();stats()}}});dashboard()}
 function parents(){let q=$("parent").value.trim().toLowerCase(),a=D.cases.filter(c=>c.stage==="新案"&&(!q||String(c.doc||"").toLowerCase().includes(q)));$("parentSuggest").innerHTML=a.length?a.slice(0,30).map(c=>`<div class="parent-option" data-parent="${esc(c.doc)}"><b>${esc(c.doc)}</b>｜${esc(c.vendor||"")}｜${esc(c.product||"")}</div>`).join(""):q?'<div class="parent-empty">查無符合的母文</div>':'';$("parentSuggest").classList.toggle("hidden",!q);document.querySelectorAll(".parent-option").forEach(x=>x.onclick=()=>{$("parent").value=x.dataset.parent;$("parentSuggest").classList.add("hidden");sync()})}
@@ -69,13 +44,11 @@ function dashboard(){let active=D.cases.filter(c=>!C.includes(c.status)&&!HOLD.i
 function stats(){let ms=[...new Set(D.cases.map(c=>month(c.received)).filter(Boolean))].sort().reverse(),rms=[...new Set(D.cases.map(c=>month(c.review)).filter(Boolean))].sort().reverse();if(!ms.length)ms=[new Date().toISOString().slice(0,7)];if(!rms.length)rms=[new Date().toISOString().slice(0,7)];$("mc").innerHTML=ms.map((m,i)=>`<label><input class="mc" type="checkbox" value="${m}" ${i?"":"checked"}>${m}</label>`).join("");$("rc").innerHTML=rms.map((m,i)=>`<label><input class="rc" type="checkbox" value="${m}" ${i?"":"checked"}>${m}</label>`).join("");document.querySelectorAll(".mc").forEach(x=>x.onchange=s1);document.querySelectorAll(".rc").forEach(x=>x.onchange=s3);$("s3type").onchange=s3;s1();s2();s3();rules()}
 function s1(){let ms=[...document.querySelectorAll(".mc:checked")].map(x=>x.value);$("s1").innerHTML=ms.flatMap(m=>T.map(t=>{let a=D.cases.filter(c=>month(c.received)===m&&c.type===t);return`<tr><td>${m}</td><td>${t}</td><td>${a.length}</td><td>${a.filter(c=>c.status==="待處理").length}</td></tr>`})).join("")}
 function s2(){$("s2").innerHTML=T.flatMap(t=>stagesFor(t).map(g=>{let a=D.cases.filter(c=>c.type===t&&c.stage===g&&c.status==="待處理").sort((x,y)=>(x.received||"").localeCompare(y.received||""));return`<tr><td>${t}</td><td>${g}</td><td>${a.length}</td><td>${a[0]?.received||"—"}</td></tr>`})).join("")}
-function s3(){let ms=[...document.querySelectorAll(".rc:checked")].map(x=>x.value),ok=["送覆核","發文待補","已補件",APPEAL,"發文結案","撤案"];$('s3').textContent=D.cases.filter(c=>ms.includes(month(c.review))&&ok.includes(c.status)).map(c=>`${c.doc} / ${month(c.received)} / ${c.stage}`).join("\n")||"目前沒有符合條件的案件"}
+function s3(){let ms=[...document.querySelectorAll(".rc:checked")].map(x=>x.value),ok=["送覆核","發文待補","已補件",APPEAL,"發文結案","撤案"],ty=$("s3type").value;$('s3').textContent=D.cases.filter(c=>ms.includes(month(c.review))&&ok.includes(c.status)&&(!ty||c.type===ty)).map(c=>`${c.doc} / ${month(c.received)} / ${c.stage}`).join("\n")||"目前沒有符合條件的案件"}
 function rules(){$("rules").innerHTML=T.flatMap(t=>stagesFor(t).map(g=>{let r=D.rules[t+"|"+g]||{red:3,yellow:7};return`<tr><td>${t}</td><td>${g}</td><td><input class="rule" data-k="${t}|${g}" data-f="red" type="number" min="0" value="${r.red}"></td><td><input class="rule" data-k="${t}|${g}" data-f="yellow" type="number" min="0" value="${r.yellow}"></td></tr>`})).join("")}
 $("saveRules").onclick=()=>{document.querySelectorAll(".rule").forEach(x=>{D.rules[x.dataset.k]=D.rules[x.dataset.k]||{};D.rules[x.dataset.k][x.dataset.f]=Number(x.value)||0});save();render();alert("提醒設定已儲存")};
 document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active");if(b.dataset.page!=="cases")stats();if(b.dataset.page==="dashboard")dashboard()});
 $("export").onclick=()=>{let text=JSON.stringify({version:4,...D});let blob=new Blob([text],{type:"application/json"}),a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="案件管理備份_"+new Date().toISOString().slice(0,10)+".json";a.click()};
 $("import").onchange=async e=>{let f=e.target.files[0];if(!f)return;try{let o=JSON.parse(await f.text());if(!Array.isArray(o.cases))throw Error();if(confirm("匯入會覆蓋目前資料，確定嗎？")){D={cases:o.cases,rules:o.rules||{}};D.cases.forEach(c=>{if(c.vendor===undefined)c.vendor=""});save();render();stats();alert("匯入完成")}}catch(x){alert("備份檔案無法讀取")}};
 render();stats();
-// 自動跨日檢查：即使使用者沒有重新整理頁面，到了截止日後也會自動移入「已結案」。
-setInterval(()=>{if(normalizeAutoStatuses()) {render();stats()}},60000);
 })();
